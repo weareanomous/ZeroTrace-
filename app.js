@@ -1,3 +1,4 @@
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import {
   getAuth,
@@ -35,8 +36,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-const secretKey = "SuperSecureKey123"; // Change for production!
-
 // UI refs
 const authDiv = document.getElementById("auth");
 const mainDiv = document.getElementById("main");
@@ -58,14 +57,20 @@ const closeChatBtn = document.getElementById("closeChatBtn");
 let currentUser = null;
 let currentChatId = null;
 let currentChatFriend = null;
+let userKey = null;  // AES key derived from password
+
+// Helper: derive key from password using SHA256
+function deriveKey(password) {
+  return CryptoJS.SHA256(password).toString();
+}
 
 // Encryption helpers
-function encrypt(text) {
-  return CryptoJS.AES.encrypt(text, secretKey).toString();
+function encrypt(text, key) {
+  return CryptoJS.AES.encrypt(text, key).toString();
 }
-function decrypt(cipher) {
+function decrypt(cipher, key) {
   try {
-    const bytes = CryptoJS.AES.decrypt(cipher, secretKey);
+    const bytes = CryptoJS.AES.decrypt(cipher, key);
     return bytes.toString(CryptoJS.enc.Utf8);
   } catch {
     return "[Encrypted]";
@@ -81,6 +86,10 @@ loginBtn.onclick = () => {
     return;
   }
   signInWithEmailAndPassword(auth, email, password)
+    .then(() => {
+      userKey = deriveKey(password);
+      passwordInput.value = ""; // clear password for security
+    })
     .catch(e => alert(e.message));
 };
 
@@ -93,7 +102,7 @@ signupBtn.onclick = () => {
   }
   createUserWithEmailAndPassword(auth, email, password)
     .then(({ user }) => {
-      // Create user profile in DB
+      // Store user profile in DB (without password)
       set(ref(db, `users/${user.uid}`), {
         email: user.email,
       });
@@ -112,6 +121,7 @@ logoutBtn.onclick = () => {
   messageInput.value = "";
   currentChatId = null;
   currentChatFriend = null;
+  userKey = null;
 };
 
 onAuthStateChanged(auth, user => {
@@ -128,6 +138,7 @@ onAuthStateChanged(auth, user => {
     friendsListEl.innerHTML = "";
     friendEmailInput.value = "";
     messageInput.value = "";
+    userKey = null;
   }
 });
 
@@ -166,6 +177,7 @@ addFriendBtn.onclick = async () => {
     return;
   }
   const friendUid = Object.keys(querySnap.val())[0];
+  // Add friend bidirectionally
   await set(ref(db, `friends/${currentUser.uid}/${friendUid}`), true);
   await set(ref(db, `friends/${friendUid}/${currentUser.uid}`), true);
   friendEmailInput.value = "";
@@ -177,6 +189,10 @@ function getChatId(uid1, uid2) {
 }
 
 function openChat(friendUid, friendEmail) {
+  if (!userKey) {
+    alert("Encryption key not ready. Please login again.");
+    return;
+  }
   currentChatId = getChatId(currentUser.uid, friendUid);
   currentChatFriend = friendEmail;
   chatFriendName.textContent = friendEmail;
@@ -200,7 +216,7 @@ function listenMessages(chatId) {
     messagesDiv.innerHTML = "";
     for (const msgId in msgs) {
       const { user, message } = msgs[msgId];
-      const decryptedMsg = decrypt(message);
+      const decryptedMsg = decrypt(message, userKey);
       const senderClass = (user === currentUser.email) ? "msg-you" : "msg-friend";
       const p = document.createElement("p");
       p.className = senderClass;
@@ -214,7 +230,11 @@ function listenMessages(chatId) {
 sendMsgBtn.onclick = () => {
   const msg = messageInput.value.trim();
   if (!msg || !currentChatId) return;
-  const encryptedMsg = encrypt(msg);
+  if (!userKey) {
+    alert("Encryption key not ready. Please login again.");
+    return;
+  }
+  const encryptedMsg = encrypt(msg, userKey);
   const chatRef = ref(db, `chats/${currentChatId}`);
   push(chatRef, {
     user: currentUser.email,
