@@ -1,28 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ZeroTrace - Secure Chat</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ZeroTrace - Secure Chat</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="auth">
-    <h2>Login / Signup</h2>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button onclick="login()">Login</button>
-    <button onclick="signup()">Signup</button>
-  </div>
 
-  <div id="chat" style="display:none;">
-    <h2>ZeroTrace 🔐</h2>
+<div id="auth">
+  <h2>Login / Signup</h2>
+  <input type="email" id="email" placeholder="Email" autocomplete="username" />
+  <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+  <button id="loginBtn">Login</button>
+  <button id="signupBtn">Signup</button>
+</div>
+
+<div id="main" style="display:none;">
+  <button id="logoutBtn">Logout</button>
+  <h3>Friends</h3>
+  <input type="email" id="friendEmail" placeholder="Add Friend by Email" autocomplete="off" />
+  <button id="addFriendBtn">Add Friend</button>
+  <ul id="friendsList"></ul>
+
+  <div id="chatArea" style="display:none;">
+    <h3>Chat with <span id="chatFriendName"></span></h3>
     <div id="messages"></div>
-    <input type="text" id="message" placeholder="Type your message..." />
-    <button onclick="sendMessage()">Send</button>
-    <button onclick="logout()">Logout</button>
+    <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" />
+    <button id="sendMsgBtn">Send</button>
+    <button id="closeChatBtn">Close Chat</button>
   </div>
+</div>
 
-  <script type="module" src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
